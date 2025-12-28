@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         ChatGPT Plain Text Composer (Hide ProseMirror)
 // @namespace    vm-chatgpt-plain-composer
-// @version      0.6
-// @description  Replace ChatGPT composer with a plain textarea for smoother typing. Adds autogrow + per-chat drafts + cleanup + correct multiline sending + throttled MutationObserver + non-overlapping toggle UX + aligns with main column (sidebar-aware).
+// @version      0.7
+// @description  Replace ChatGPT composer with a plain textarea for smoother typing. Adds autogrow + per-chat drafts + cleanup + correct multiline sending + throttled MutationObserver + non-overlapping toggle UX + aligns with main column (sidebar-aware) + caps width to thread max width.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
 // @grant        none
@@ -13,8 +13,8 @@
 
   // ---- Config ----
   const CONFIG = {
-    // NOTE: panelWidth is now "auto-aligned" to main column; this is only used as fallback
-    fallbackWidth: "900px",
+    // Used if thread max width variables don't exist for some reason
+    fallbackThreadMaxWidth: "48rem",
 
     // Autogrow behavior
     minHeightPx: 30,
@@ -314,20 +314,48 @@
     pmEl.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  // ---- Alignment (sidebar-aware) ----
+  // ---- Alignment (sidebar-aware + thread max width) ----
   function getMainContentAnchor() {
-    // This is the container you found: div[class*="@container/main"]
     const main =
       document.querySelector('div[class*="@container/main"]') ||
       document.querySelector('div[class*="container/main"]');
 
     if (main) return main;
 
-    // fallback: composer’s parent
     const form = getComposerForm();
     if (form) return form.parentElement || form;
 
     return document.body;
+  }
+
+  function createThreadWidthWrapperIfNeeded(aligner) {
+    let threadWrap = aligner.querySelector("#vm-plain-threadwrap");
+    if (threadWrap) return threadWrap;
+
+    threadWrap = document.createElement("div");
+    threadWrap.id = "vm-plain-threadwrap";
+
+    // Match the thread constraints:
+    // - center inside the main column
+    // - cap to thread max width variable (fallback to 48rem)
+    threadWrap.style.pointerEvents = "none";
+    threadWrap.style.marginLeft = "auto";
+    threadWrap.style.marginRight = "auto";
+    threadWrap.style.maxWidth = `var(--thread-content-max-width, ${CONFIG.fallbackThreadMaxWidth})`;
+
+    // Move the panel into threadWrap
+    const panel = aligner.firstElementChild;
+    aligner.innerHTML = "";
+    threadWrap.appendChild(panel);
+    aligner.appendChild(threadWrap);
+
+    // Panel must be interactive and full width within the threadWrap
+    panel.style.pointerEvents = "auto";
+    panel.style.width = "100%";
+    panel.style.maxWidth = "unset";
+    panel.style.margin = "0";
+
+    return threadWrap;
   }
 
   function syncOverlayToMainAnchor() {
@@ -340,7 +368,7 @@
     const rect = anchor.getBoundingClientRect();
     if (!rect.width || rect.width < 200) return;
 
-    // We use a nested fixed-position aligner inside wrapper.
+    // Aligner: fixed box that matches the main content area (right of sidebar)
     let aligner = STATE.wrapperEl.querySelector("#vm-plain-aligner");
 
     if (!aligner) {
@@ -359,11 +387,8 @@
       aligner.appendChild(panel);
       STATE.wrapperEl.appendChild(aligner);
 
-      // Make panel interactive
-      panel.style.pointerEvents = "auto";
-      panel.style.width = "100%";
-      panel.style.maxWidth = "unset";
-      panel.style.margin = "0";
+      // Inside aligner, create the thread wrapper to cap width
+      createThreadWidthWrapperIfNeeded(aligner);
     }
 
     aligner.style.left = `${Math.round(rect.left)}px`;
@@ -411,7 +436,6 @@
       btn.style.display = "none";
       setPlainComposerVisible(true);
 
-      // Align again (sidebar might have changed)
       syncOverlayToMainAnchor();
 
       if (STATE.textareaEl) STATE.textareaEl.focus();
@@ -441,12 +465,12 @@
     wrapper.style.zIndex = "999999";
     wrapper.style.display = "block";
     wrapper.style.padding = "0";
-    wrapper.style.pointerEvents = "none"; // aligner manages pointer-events
+    wrapper.style.pointerEvents = "none";
 
     const panel = document.createElement("div");
     panel.style.pointerEvents = "auto";
-    panel.style.width = CONFIG.fallbackWidth;
-    panel.style.maxWidth = "calc(100vw - 20px)";
+    panel.style.width = "100%";
+    panel.style.maxWidth = "unset";
     panel.style.border = "1px solid rgba(128,128,128,0.35)";
     panel.style.borderRadius = "10px";
     panel.style.background = "rgba(20,20,20,0.85)";
@@ -545,10 +569,7 @@
     loadDraftIfAny();
     autogrow(textarea);
 
-    // Ensure return button exists (hidden by default)
     ensureReturnButton();
-
-    // Align immediately (sidebar-aware)
     syncOverlayToMainAnchor();
 
     return wrapper;
@@ -605,21 +626,18 @@
     const currentlyHidden = composerForm.style.display === "none";
 
     if (currentlyHidden) {
-      // Show original
       showOriginalComposer(composerForm);
       STATE.originalVisibleByUser = true;
 
       if (CONFIG.hidePlainComposerWhenOriginalShown) setPlainComposerVisible(false);
       showReturnButton(true);
     } else {
-      // Hide original and return to plain
       if (CONFIG.hideOriginalComposer) hideOriginalComposer(composerForm);
       STATE.originalVisibleByUser = false;
 
       showReturnButton(false);
       setPlainComposerVisible(true);
 
-      // Align after toggling
       syncOverlayToMainAnchor();
 
       if (STATE.textareaEl) STATE.textareaEl.focus();
@@ -638,9 +656,7 @@
       hideOriginalComposer(composerForm);
     }
 
-    // Align continuously as layout changes (sidebar open/close)
     syncOverlayToMainAnchor();
-
     STATE.installed = true;
   }
 
@@ -660,10 +676,8 @@
       }
     }
 
-    // Sidebar/layout changes: keep aligned
     syncOverlayToMainAnchor();
 
-    // If URL changed (new conversation), update key + load draft
     const newKey = computeDraftKey();
     if (CONFIG.persistDrafts && STATE.draftKey && newKey !== STATE.draftKey) {
       STATE.draftKey = newKey;
@@ -708,7 +722,7 @@
     const observer = new MutationObserver(throttledMutationHandler);
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
-    log("Initialized v0.6 (sidebar-aware alignment).", {
+    log("Initialized v0.7 (thread max width + sidebar-aware alignment).", {
       mutationThrottleMs: CONFIG.mutationThrottleMs,
     });
   }
