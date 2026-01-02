@@ -395,6 +395,49 @@
     aligner.style.width = `${Math.round(rect.width)}px`;
   }
 
+  // ---- Focusing helper functions ----
+  function isTypingContext(el) {
+    if (!el) return false;
+
+    const tag = el.tagName ? el.tagName.toLowerCase() : "";
+    if (tag === "input" || tag === "textarea" || tag === "select") return true;
+
+    // Contenteditable or inside one
+    if (el.isContentEditable) return true;
+    if (typeof el.closest === "function" && el.closest('[contenteditable="true"]')) return true;
+
+    // Some UIs use role=textbox
+    if (el.getAttribute && el.getAttribute("role") === "textbox") return true;
+
+    return false;
+  }
+
+  function focusPlainComposer({ revealIfHidden = true } = {}) {
+    if (!STATE.textareaEl) return false;
+
+    // If user is viewing original composer and our overlay is hidden, bring it back
+    if (revealIfHidden && STATE.originalVisibleByUser) {
+      const composerForm = getComposerForm();
+      if (composerForm && CONFIG.hideOriginalComposer) {
+        hideOriginalComposer(composerForm);
+      }
+      STATE.originalVisibleByUser = false;
+      showReturnButton(false);
+      setPlainComposerVisible(true);
+      syncOverlayToMainAnchor();
+    }
+
+    // If overlay is currently not visible for any reason, show it
+    if (STATE.wrapperEl && STATE.wrapperEl.style.display === "none" && revealIfHidden) {
+      setPlainComposerVisible(true);
+      syncOverlayToMainAnchor();
+    }
+
+    STATE.textareaEl.focus();
+    return true;
+  }
+
+
   // ---- Toggle UX helpers ----
   function setPlainComposerVisible(visible) {
     if (!STATE.wrapperEl) return;
@@ -510,7 +553,7 @@
     leftInfo.style.opacity = "0.85";
     leftInfo.style.color = "#fff";
     leftInfo.textContent =
-      "Plain composer active — Ctrl/Cmd+Enter to send — Esc to toggle the original composer";
+      "Esc to toggle the original composer - Ctrl+` to receive focus";
 
     const btnRow = document.createElement("div");
     btnRow.style.display = "flex";
@@ -545,11 +588,6 @@
           e.preventDefault();
           sendPlainMessage();
         }
-      }
-
-      if (e.key === "Escape") {
-        e.preventDefault();
-        toggleOriginalComposer();
       }
     });
 
@@ -722,7 +760,41 @@
     const observer = new MutationObserver(throttledMutationHandler);
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
-    log("Initialized v0.7 (thread max width + sidebar-aware alignment).", {
+    // Global hotkey: ` (backtick) focuses the plain composer
+    document.addEventListener(
+      "keydown",
+      (e) => {
+        // Don’t do anything if overlay not ready yet
+        if (!STATE.textareaEl) return;
+
+        if (e.key === "Escape") {
+          e.preventDefault();
+          toggleOriginalComposer();
+        }
+
+        // If already focused, nothing to do
+        if (document.activeElement === STATE.textareaEl) return;
+
+        // Ignore when typing into any input/textarea/contenteditable, etc.
+        if (isTypingContext(document.activeElement)) return;
+
+        // Trigger on CTRL-backtick (physical key) or literal char
+        const isBacktick = e.ctrlKey && (e.key === "`" || e.code === "Backquote");
+        if (isBacktick) {
+          // Ignore modifier combos (so Ctrl+` etc stays available)
+          if (e.metaKey || e.altKey) return;
+
+          e.preventDefault();
+          e.stopPropagation();
+
+          focusPlainComposer({ revealIfHidden: true });
+        };
+      },
+      true // capture phase so we win over site handlers if needed
+    );
+
+
+    log("Initialized v0.7", {
       mutationThrottleMs: CONFIG.mutationThrottleMs,
     });
   }
