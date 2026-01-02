@@ -49,6 +49,7 @@ This userscript injects a **minimal plain text composer overlay** that:
 - **Per-chat drafts** stored in `localStorage`
 - **Draft cleanup** with TTL + maximum entries
 - **Esc** toggles the original ChatGPT composer
+- **Ctrl+`** transfers focus to the plain composer
 - **Toggle Original** button + optional floating return button
 - **Stable anchoring**
   - centered to the ChatGPT conversation column
