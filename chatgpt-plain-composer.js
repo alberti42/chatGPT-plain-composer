@@ -22,6 +22,7 @@
 
     fontSize: "15px",
     lineHeight: "1.4",
+    fontFamilyMono: true,
     hideOriginalComposer: true,
 
     // Draft persistence
@@ -533,8 +534,12 @@
     textarea.style.resize = "none";
     textarea.style.fontSize = CONFIG.fontSize;
     textarea.style.lineHeight = CONFIG.lineHeight;
-    textarea.style.fontFamily =
-      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
+    if (CONFIG.fontFamilyMono) {
+      textarea.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
+    } else {
+      // ChatGPT default
+      textarea.style.fontFamily = "var(--default-font-family)";
+    }
     textarea.style.border = "1px solid rgba(255,255,255,0.18)";
     textarea.style.borderRadius = "8px";
     textarea.style.padding = "10px";
