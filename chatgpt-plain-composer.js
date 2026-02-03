@@ -5,6 +5,7 @@
 // @description  Replace ChatGPT composer with a plain textarea for smoother typing. Adds autogrow + per-chat drafts + cleanup + correct multiline sending + throttled MutationObserver + non-overlapping toggle UX + aligns with main column (sidebar-aware) + caps width to thread max width.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
+// @run-at       document-start
 // @grant        none
 // ==/UserScript==
 
