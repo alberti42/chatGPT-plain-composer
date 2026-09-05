@@ -130,6 +130,7 @@ Most settings can be tweaked inside the script in the `CONFIG` object:
 - mutation observer throttling
 - send strategy preferences
 - styling (dark theme, font, padding)
+- font family: set `fontFamilyMono: true` for a monospace font, or `false` (default) to use ChatGPT's own default font. This is useful if you're typing code rather than prose
 
 ---
 
