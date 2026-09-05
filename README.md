@@ -51,6 +51,7 @@ This userscript injects a **minimal plain text composer overlay** that:
 - **Esc** toggles the original ChatGPT composer
 - **Ctrl+`** transfers focus to the plain composer
 - **Toggle Original** button + optional floating return button
+- **Remembers which composer you last chose** (plain vs. original) across reloads, stored in `localStorage`
 - **Stable anchoring**
   - centered to the ChatGPT conversation column
   - sidebar-aware layout handling
@@ -131,6 +132,7 @@ Most settings can be tweaked inside the script in the `CONFIG` object:
 - send strategy preferences
 - styling (dark theme, font, padding)
 - font family: set `fontFamilyMono: true` for a monospace font, or `false` (default) to use ChatGPT's own default font. This is useful if you're typing code rather than prose
+- `persistToggleState: true` (default) remembers, via `localStorage`, whether you last had the plain or the original composer showing, and restores that choice on the next page load. Set to `false` to always start on the plain composer
 
 ---
 

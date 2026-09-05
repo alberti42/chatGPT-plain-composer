@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Plain Text Composer (Hide ProseMirror)
 // @namespace    vm-chatgpt-plain-composer
-// @version      0.8.0
+// @version      0.9.0
 // @description  Replace ChatGPT composer with a plain textarea for smoother typing. Adds autogrow + per-chat drafts + cleanup + correct multiline sending + throttled MutationObserver + non-overlapping toggle UX + aligns with main column (sidebar-aware) + caps width to thread max width.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -49,6 +49,7 @@
     // Toggle UX
     hidePlainComposerWhenOriginalShown: true,
     showReturnButtonWhenOriginalShown: true,
+    persistToggleState: true,
 
     // Alignment
     alignToMainColumn: true,
@@ -443,7 +444,7 @@
       if (composerForm && CONFIG.hideOriginalComposer) {
         hideOriginalComposer(composerForm);
       }
-      STATE.originalVisibleByUser = false;
+      setOriginalVisibleByUser(false);
       showReturnButton(false);
       setPlainComposerVisible(true);
       syncOverlayToMainAnchor();
@@ -464,6 +465,29 @@
   }
 
   // ---- Toggle UX helpers ----
+  const TOGGLE_STATE_KEY = "vm_plain_composer_show_original";
+
+  function loadToggleState() {
+    if (!CONFIG.persistToggleState) return false;
+    try {
+      return localStorage.getItem(TOGGLE_STATE_KEY) === "1";
+    } catch (e) {
+      log("Toggle state load failed:", e);
+      return false;
+    }
+  }
+
+  function setOriginalVisibleByUser(showOriginal) {
+    STATE.originalVisibleByUser = showOriginal;
+
+    if (!CONFIG.persistToggleState) return;
+    try {
+      localStorage.setItem(TOGGLE_STATE_KEY, showOriginal ? "1" : "0");
+    } catch (e) {
+      log("Toggle state save failed:", e);
+    }
+  }
+
   function setPlainComposerVisible(visible) {
     if (!STATE.wrapperEl) return;
     STATE.wrapperEl.style.display = visible ? "block" : "none";
@@ -494,7 +518,7 @@
     btn.style.display = "none";
 
     btn.addEventListener("click", () => {
-      STATE.originalVisibleByUser = false;
+      setOriginalVisibleByUser(false);
 
       const composerForm = getComposerForm();
       if (composerForm && CONFIG.hideOriginalComposer) {
@@ -716,14 +740,14 @@
 
     if (currentlyHidden) {
       showOriginalComposer(composerForm);
-      STATE.originalVisibleByUser = true;
+      setOriginalVisibleByUser(true);
 
       if (CONFIG.hidePlainComposerWhenOriginalShown)
         setPlainComposerVisible(false);
       showReturnButton(true);
     } else {
       if (CONFIG.hideOriginalComposer) hideOriginalComposer(composerForm);
-      STATE.originalVisibleByUser = false;
+      setOriginalVisibleByUser(false);
 
       showReturnButton(false);
       setPlainComposerVisible(true);
@@ -740,10 +764,17 @@
     if (!composerForm) return;
 
     STATE.lastKnownComposerForm = composerForm;
+    STATE.originalVisibleByUser = loadToggleState();
     createPlainComposerUI();
 
-    if (CONFIG.hideOriginalComposer && !STATE.originalVisibleByUser) {
-      hideOriginalComposer(composerForm);
+    if (STATE.originalVisibleByUser) {
+      showOriginalComposer(composerForm);
+      if (CONFIG.hidePlainComposerWhenOriginalShown)
+        setPlainComposerVisible(false);
+      showReturnButton(true);
+    } else {
+      if (CONFIG.hideOriginalComposer) hideOriginalComposer(composerForm);
+      showReturnButton(false);
     }
 
     syncOverlayToMainAnchor();
@@ -852,7 +883,7 @@
       true, // capture phase so we win over site handlers if needed
     );
 
-    log("Initialized v0.8.0", {
+    log("Initialized v0.9.0", {
       mutationThrottleMs: CONFIG.mutationThrottleMs,
     });
   }
