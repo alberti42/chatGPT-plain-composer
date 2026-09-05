@@ -38,6 +38,11 @@
     // Hotkeys
     sendHotkeyRequiresCtrlOrCmd: true,
 
+    // Keep text selection and cursor movement keys (e.g. SHIFT-DOWN),
+    // and scroll events, local to text area, so they aren't interpreted
+    // as scrolling the main chat window.
+    cursorNoPropagation: true,
+
     // MutationObserver throttling
     mutationThrottleMs: 200,
 
@@ -586,6 +591,18 @@
 
     sendBtn.addEventListener("click", () => sendPlainMessage());
     toggleBtn.addEventListener("click", () => toggleOriginalComposer());
+
+    // If set, prevent cursor and scroll being heard by the wider window outside the textarea
+    // but allow escape and enter to bubble as they have specific uses
+    // No need to handle other keys (backtick) as these should act as normal keys within the textbox
+    if (CONFIG.cursorNoPropagation) {
+        ['keydown', 'keyup', 'keypress', 'wheel'].forEach(eventType => {
+        textarea.addEventListener(eventType, (e) => {
+            if (e.key === "Escape" || e.key === "Enter") return;
+            e.stopPropagation();
+        }, { capture: true });
+      });
+    }
 
     textarea.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
