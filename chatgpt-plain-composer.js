@@ -23,7 +23,7 @@
 
     fontSize: "15px",
     lineHeight: "1.4",
-    fontFamilyMono: true,
+    fontFamilyMono: false,
     hideOriginalComposer: true,
 
     // Draft persistence
