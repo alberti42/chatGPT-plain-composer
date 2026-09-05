@@ -86,7 +86,7 @@
 
   function getComposerForm() {
     return (
-      qs('form.group\\/composer') ||
+      qs("form.group\\/composer") ||
       qs('form[data-type="unified-composer"]') ||
       null
     );
@@ -172,7 +172,9 @@
   }
 
   function isOurDraftKey(key) {
-    return typeof key === "string" && key.startsWith("vm_plain_composer_draft:");
+    return (
+      typeof key === "string" && key.startsWith("vm_plain_composer_draft:")
+    );
   }
 
   function safeJsonParse(s) {
@@ -204,7 +206,9 @@
 
       const obj = safeJsonParse(raw);
       if (!obj || typeof obj !== "object") {
-        try { localStorage.removeItem(k); } catch {}
+        try {
+          localStorage.removeItem(k);
+        } catch {}
         continue;
       }
 
@@ -212,7 +216,9 @@
       const text = typeof obj.text === "string" ? obj.text : "";
 
       if (!ts || ts < cutoff || text.length === 0) {
-        try { localStorage.removeItem(k); } catch {}
+        try {
+          localStorage.removeItem(k);
+        } catch {}
         continue;
       }
 
@@ -223,7 +229,9 @@
       entries.sort((a, b) => b.ts - a.ts);
       const toRemove = entries.slice(CONFIG.maxDraftEntries);
       for (const e of toRemove) {
-        try { localStorage.removeItem(e.key); } catch {}
+        try {
+          localStorage.removeItem(e.key);
+        } catch {}
       }
     }
   }
@@ -288,7 +296,10 @@
     if (!textarea) return;
     textarea.style.height = "auto";
     const maxPx = Math.round((window.innerHeight * CONFIG.maxHeightVh) / 100);
-    const newPx = Math.min(Math.max(textarea.scrollHeight, CONFIG.minHeightPx), maxPx);
+    const newPx = Math.min(
+      Math.max(textarea.scrollHeight, CONFIG.minHeightPx),
+      maxPx,
+    );
     textarea.style.height = `${newPx}px`;
   }
 
@@ -316,7 +327,7 @@
         bubbles: true,
         cancelable: true,
         inputType: "insertText",
-      })
+      }),
     );
     pmEl.dispatchEvent(new Event("change", { bubbles: true }));
   }
@@ -411,7 +422,11 @@
 
     // Contenteditable or inside one
     if (el.isContentEditable) return true;
-    if (typeof el.closest === "function" && el.closest('[contenteditable="true"]')) return true;
+    if (
+      typeof el.closest === "function" &&
+      el.closest('[contenteditable="true"]')
+    )
+      return true;
 
     // Some UIs use role=textbox
     if (el.getAttribute && el.getAttribute("role") === "textbox") return true;
@@ -435,7 +450,11 @@
     }
 
     // If overlay is currently not visible for any reason, show it
-    if (STATE.wrapperEl && STATE.wrapperEl.style.display === "none" && revealIfHidden) {
+    if (
+      STATE.wrapperEl &&
+      STATE.wrapperEl.style.display === "none" &&
+      revealIfHidden
+    ) {
       setPlainComposerVisible(true);
       syncOverlayToMainAnchor();
     }
@@ -443,7 +462,6 @@
     STATE.textareaEl.focus();
     return true;
   }
-
 
   // ---- Toggle UX helpers ----
   function setPlainComposerVisible(visible) {
@@ -541,7 +559,8 @@
     textarea.style.fontSize = CONFIG.fontSize;
     textarea.style.lineHeight = CONFIG.lineHeight;
     if (CONFIG.fontFamilyMono) {
-      textarea.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
+      textarea.style.fontFamily =
+        "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
     } else {
       // ChatGPT default
       textarea.style.fontFamily = "var(--default-font-family)";
@@ -596,11 +615,15 @@
     // but allow escape and enter to bubble as they have specific uses
     // No need to handle other keys (backtick) as these should act as normal keys within the textbox
     if (CONFIG.cursorNoPropagation) {
-        ['keydown', 'keyup', 'keypress', 'wheel'].forEach(eventType => {
-        textarea.addEventListener(eventType, (e) => {
+      ["keydown", "keyup", "keypress", "wheel"].forEach((eventType) => {
+        textarea.addEventListener(
+          eventType,
+          (e) => {
             if (e.key === "Escape" || e.key === "Enter") return;
             e.stopPropagation();
-        }, { capture: true });
+          },
+          { capture: true },
+        );
       });
     }
 
@@ -658,7 +681,8 @@
     const sendBtn = getSendButton(composerForm);
     if (!sendBtn) {
       log("Send button not found.");
-      if (wasHidden && CONFIG.hideOriginalComposer) hideOriginalComposer(composerForm);
+      if (wasHidden && CONFIG.hideOriginalComposer)
+        hideOriginalComposer(composerForm);
       return;
     }
 
@@ -674,7 +698,11 @@
     STATE.lastSavedValue = "";
     autogrow(STATE.textareaEl);
 
-    if (!STATE.originalVisibleByUser && wasHidden && CONFIG.hideOriginalComposer) {
+    if (
+      !STATE.originalVisibleByUser &&
+      wasHidden &&
+      CONFIG.hideOriginalComposer
+    ) {
       await sleep(40);
       hideOriginalComposer(composerForm);
     }
@@ -690,7 +718,8 @@
       showOriginalComposer(composerForm);
       STATE.originalVisibleByUser = true;
 
-      if (CONFIG.hidePlainComposerWhenOriginalShown) setPlainComposerVisible(false);
+      if (CONFIG.hidePlainComposerWhenOriginalShown)
+        setPlainComposerVisible(false);
       showReturnButton(true);
     } else {
       if (CONFIG.hideOriginalComposer) hideOriginalComposer(composerForm);
@@ -763,11 +792,14 @@
 
       if (!scheduled) {
         scheduled = true;
-        setTimeout(() => {
-          lastRun = Date.now();
-          scheduled = false;
-          fn();
-        }, Math.max(0, intervalMs - elapsed));
+        setTimeout(
+          () => {
+            lastRun = Date.now();
+            scheduled = false;
+            fn();
+          },
+          Math.max(0, intervalMs - elapsed),
+        );
       }
     };
   }
@@ -777,11 +809,14 @@
 
     const throttledMutationHandler = makeThrottledHandler(
       handleMutations,
-      CONFIG.mutationThrottleMs
+      CONFIG.mutationThrottleMs,
     );
 
     const observer = new MutationObserver(throttledMutationHandler);
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
 
     // Global hotkey: ` (backtick) focuses the plain composer
     document.addEventListener(
@@ -802,7 +837,8 @@
         if (isTypingContext(document.activeElement)) return;
 
         // Trigger on CTRL-backtick (physical key) or literal char
-        const isBacktick = e.ctrlKey && (e.key === "`" || e.code === "Backquote");
+        const isBacktick =
+          e.ctrlKey && (e.key === "`" || e.code === "Backquote");
         if (isBacktick) {
           // Ignore modifier combos (so Ctrl+` etc stays available)
           if (e.metaKey || e.altKey) return;
@@ -811,11 +847,10 @@
           e.stopPropagation();
 
           focusPlainComposer({ revealIfHidden: true });
-        };
+        }
       },
-      true // capture phase so we win over site handlers if needed
+      true, // capture phase so we win over site handlers if needed
     );
-
 
     log("Initialized v0.7", {
       mutationThrottleMs: CONFIG.mutationThrottleMs,
