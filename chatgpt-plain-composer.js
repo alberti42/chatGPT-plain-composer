@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Plain Text Composer (Hide ProseMirror)
 // @namespace    vm-chatgpt-plain-composer
-// @version      0.7
+// @version      0.8.0
 // @description  Replace ChatGPT composer with a plain textarea for smoother typing. Adds autogrow + per-chat drafts + cleanup + correct multiline sending + throttled MutationObserver + non-overlapping toggle UX + aligns with main column (sidebar-aware) + caps width to thread max width.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -852,7 +852,7 @@
       true, // capture phase so we win over site handlers if needed
     );
 
-    log("Initialized v0.7", {
+    log("Initialized v0.8.0", {
       mutationThrottleMs: CONFIG.mutationThrottleMs,
     });
   }
